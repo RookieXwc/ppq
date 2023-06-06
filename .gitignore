@@ -8,3 +8,11 @@ __pycache__/
 /build
 /dist
 /ppq.egg-info
+*.jpg
+*.npy
+*.png
+*.engine
+*.txt
+*.cache
+*.json
+*.wts
