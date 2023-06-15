@@ -10,7 +10,7 @@ from ppq.core import convert_any_to_torch_tensor, ppq_warning
 
 def load_calibration_dataset_yolov5(
     directory: str, input_shape: List[int],
-    batchsize: int, input_format: str = 'chw') -> Iterable:
+    batchsize: int, input_format: str = 'chw',single = False) -> Iterable:
     """使用这个函数来加载校准数据集，校准数据集将被用来量化你的模型。这个函数只被用来加载图像数据集。
     你需要给出校准数据集位置，我们建议你将每张图片都单独保存到文件中，这个函数会自己完成后续的打包处理工作。
     校准数据集不应过大，这个函数会将所有数据加载到内存中，同时过大的校准数据集也不利于后续的量化处理操作。
@@ -55,7 +55,8 @@ def load_calibration_dataset_yolov5(
             sample = sample.reshape(input_shape)
             num_of_file += 1
         elif file.endswith('.png') or file.endswith('.jpg'):
-            # file = '3331fe62-color_421.png'
+            if single == True:
+                file = '3331fe62-color_421.png'
             im = cv2.imread(os.path.join(directory, 'data', file))
             h0, w0 = im.shape[:2]
             h, w =im.shape[:2]

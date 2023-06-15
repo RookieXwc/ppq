@@ -52,7 +52,7 @@ QS = QuantizationSettingFactory.default_setting()
 if TRAINING_YOUR_NETWORK:
     QS.lsq_optimization = True                                      # 启动网络再训练过程，降低量化误差
     QS.lsq_optimization_setting.steps = 500                         # 再训练步数，影响训练时间，500 步大概几分钟
-    QS.lsq_optimization_setting.collecting_device = 'cuda'          # 缓存数据放在那，cuda 就是放在gpu，如果显存超了你就换成 'cpu'
+    QS.lsq_optimization_setting.collecting_device = 'cpu'          # 缓存数据放在那，cuda 就是放在gpu，如果显存超了你就换成 'cpu'
 
 # -------------------------------------------------------------------
 # 你可以把量化很糟糕的算子送回 FP32
@@ -81,7 +81,15 @@ dataloader = load_calibration_dataset_yolov5(
     directory    = WORKING_DIRECTORY,
     input_shape  = NETWORK_INPUTSHAPE,
     batchsize    = CALIBRATION_BATCHSIZE,
-    input_format = INPUT_LAYOUT)
+    input_format = INPUT_LAYOUT,
+    single = False)
+
+dataloader2 = load_calibration_dataset_yolov5(
+    directory    = WORKING_DIRECTORY,
+    input_shape  = NETWORK_INPUTSHAPE,
+    batchsize    = CALIBRATION_BATCHSIZE,
+    input_format = INPUT_LAYOUT,
+    single = True)
 
 # ENABLE CUDA KERNEL 会加速量化效率 3x ~ 10x，但是你如果没有装相应编译环境的话是编译不了的
 # 你可以尝试安装编译环境，或者在不启动 CUDA KERNEL 的情况下完成量化：移除 with ENABLE_CUDA_KERNEL(): 即可
@@ -91,7 +99,7 @@ with ENABLE_CUDA_KERNEL():
         setting=QS,                     # setting 对象用来控制标准量化逻辑
         model=graph,
         calib_dataloader=dataloader,
-        calib_steps=32,                 # 这个calib_steps应该是用多少个batch来做calib，上边的CALIBRATION_BATCHSIZE是每个batch的batch size，16*32刚好为512
+        calib_steps=64,                 # 这个calib_steps应该是用多少个batch来做calib，上边的CALIBRATION_BATCHSIZE是每个batch的batch size，16*32刚好为512
         input_shape=NETWORK_INPUTSHAPE, # 如果你的网络只有一个输入，使用这个参数传参
         inputs=None,                    # 如果你的网络有多个输入，使用这个参数传参，就是 input_shape=None, inputs=[torch.zeros(1,3,224,224), torch.zeros(1,3,224,224)]
         collate_fn=lambda x: x.to(EXECUTING_DEVICE),  # collate_fn 跟 torch dataloader 的 collate fn 是一样的，用于数据预处理，
@@ -108,7 +116,7 @@ with ENABLE_CUDA_KERNEL():
     executor = TorchExecutor(graph=quantized, device=EXECUTING_DEVICE)
 
     # 使用executor对模型(量化的或者不量化由上方do_quantize=True控制)进行推理和后处理以验证
-    output = executor.forward(dataloader[0][0].unsqueeze(0))
+    output = executor.forward(dataloader2[0][0].unsqueeze(0))
     pred = non_max_suppression(output[0], 0.25, 0.45, None, False, max_det=1000)
 
     # -------------------------------------------------------------------
